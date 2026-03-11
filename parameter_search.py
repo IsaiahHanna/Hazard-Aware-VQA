@@ -12,6 +12,7 @@ from PIL import Image, ImageChops
 
 from peft import LoraConfig, get_peft_model
 from qwen_vl_utils import process_vision_info
+from trl import SFTConfig, SFTTrainer
 from transformers import (
     AutoProcessor, 
     BitsAndBytesConfig, 
