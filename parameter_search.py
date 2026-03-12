@@ -290,47 +290,49 @@ def run_experiment(lr_val, rank_val, dataset, is_final=False):
 
 # Search for Best Parameters
 processor = AutoProcessor.from_pretrained("Qwen/Qwen2.5-VL-3B-Instruct")
-os.environ["MAX_WORKERS"] = "4" 
-flat_data_list = prepare_drama_x_dataset(csv)
-train_dataset = Dataset.from_list(flat_data_list)
-print(f"Dataset ready. Columns: {train_dataset.column_names}")
-
-
-# Sweep Learning Rate (Proposed: 1e-5, 2e-5, 5e-5)
-best_lr = 1e-5
-lowest_lr_loss = float('inf')
-
-for lr in [1e-5, 2e-5, 5e-5]: 
-    print(f"\n Starting Phase 2.1 | Testing LR: {lr}, Rank: 8")
-    try:
-        # run_experiment handles the VRAM reset, BF16 config, and training
-        loss = run_experiment(lr, 8, train_dataset) 
-        log_result(lr, 8, loss)
+if __name__ == "__main__":
+    os.environ["MAX_WORKERS"] = "4" 
         
-        if loss < lowest_lr_loss:
-            lowest_lr_loss = loss
-            best_lr = lr
-    except Exception as e:
-        print(f"Run Failed for LR {lr}: {e}")
-        log_result(lr, 8, str(e), status="failed")
+    flat_data_list = prepare_drama_x_dataset(csv)
+    train_dataset = Dataset.from_list(flat_data_list)
+    print(f"Dataset ready. Columns: {train_dataset.column_names}")
 
-# Sweep LoRA Rank (Values from Proposal Table I)
-# Locking in the best_lr found above to optimize the rank-r manifold.
-best_rank = 8
-lowest_rank_loss = lowest_lr_loss
 
-for r in [4, 8, 16]: # 
-    print(f"\n Starting Phase 2.2 | Testing Rank: {r} with Best LR: {best_lr}")
-    try:
-        loss = run_experiment(best_lr, r, train_dataset)
-        log_result(best_lr, r, loss)
-        
-        if loss < lowest_rank_loss:
-            lowest_rank_loss = loss
-            best_rank = r
-    except Exception as e:
-        print(f"Run Failed for Rank {r}: {e}")
-        log_result(best_lr, r, str(e), status="failed")
+    # Sweep Learning Rate (Proposed: 1e-5, 2e-5, 5e-5)
+    best_lr = 1e-5
+    lowest_lr_loss = float('inf')
 
-print(f"\nPHASE 2 COMPLETE")
-print(f"Optimized Configuration: LR={best_lr}, Rank={best_rank}")
+    for lr in [1e-5, 2e-5, 5e-5]: 
+        print(f"\n Starting Phase 2.1 | Testing LR: {lr}, Rank: 8")
+        try:
+            # run_experiment handles the VRAM reset, BF16 config, and training
+            loss = run_experiment(lr, 8, train_dataset) 
+            log_result(lr, 8, loss)
+            
+            if loss < lowest_lr_loss:
+                lowest_lr_loss = loss
+                best_lr = lr
+        except Exception as e:
+            print(f"Run Failed for LR {lr}: {e}")
+            log_result(lr, 8, str(e), status="failed")
+
+    # Sweep LoRA Rank (Values from Proposal Table I)
+    # Locking in the best_lr found above to optimize the rank-r manifold.
+    best_rank = 8
+    lowest_rank_loss = lowest_lr_loss
+
+    for r in [4, 8, 16]: # 
+        print(f"\n Starting Phase 2.2 | Testing Rank: {r} with Best LR: {best_lr}")
+        try:
+            loss = run_experiment(best_lr, r, train_dataset)
+            log_result(best_lr, r, loss)
+            
+            if loss < lowest_rank_loss:
+                lowest_rank_loss = loss
+                best_rank = r
+        except Exception as e:
+            print(f"Run Failed for Rank {r}: {e}")
+            log_result(best_lr, r, str(e), status="failed")
+
+    print(f"\nPHASE 2 COMPLETE")
+    print(f"Optimized Configuration: LR={best_lr}, Rank={best_rank}")
