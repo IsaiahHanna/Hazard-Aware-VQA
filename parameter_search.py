@@ -11,7 +11,6 @@ from datasets import Dataset
 from PIL import Image, ImageChops
 
 from peft import LoraConfig, get_peft_model
-from qwen_vl_utils import process_vision_info
 from trl import SFTConfig, SFTTrainer
 from transformers import (
     AutoProcessor, 
@@ -112,15 +111,37 @@ def prepare_drama_x_dataset(df):
     # Adopting this prompt ensures alignment with the 5-class intent taxonomy 
     # and allows for direct performance comparison with the baseline paper. 
     PROMPT_TEXT = (
-        "For the provided image and question, generate a object-intent JSON which includes the following:\n"
-        "1. At most 5 objects from the scene including Pedestrians and Cylists.\n"
-        "2. Predicted intent for every object. Intent should be one of these values:\n"
-        "2.1 Lateral (Sideways) Intent Options: 'goes to the left', 'goes to the right'\n"
-        "2.2. Vertical Intent Options: 'moves away from ego vehicle', 'moves towards ego vehicle', 'stationary'\n"
-        "3. Risk score for this prediction (Yes or No)\n"
-        "4. Bounding box of each object [x1, y1, x2, y2].\n"
-        "5. Suggested action given the scene and risk score.\n"
-        "Strictly output valid JSON matching the dictionary structure provided."
+        """
+        For the provided image and question, generate a object-intent JSON which includes the following: 
+        1. AT MOST 5 objects from the scene including Pedestrians and Cylists.
+        2. Predicted intent for every object. Intent should be one of these values:
+        2.1 Lateral (Sideways) Intent Options (has to be from these two options): - “goes to the left” - “goes
+        to the right”
+        2.2 Vertical Intent Options: -“moves away from ego vehicle” - “moves towards ego vehicle” -
+        “stationary”
+        3. Risk score for this prediction (Yes or No). Risk is defined as a hazardous scenario that poses
+        danger to the ego vehicle.
+        4. Bounding box of each object. these should be with respect to orginal image dimensions.
+        5. Suggested action given the scene and risk score.
+        An example structure would look like this:
+        {
+        "Risk": "Yes/No",
+        "Suggested_action": "suggested action for ego vehicle",
+        "pedestrian": {
+        "Intent": ["predicted lateral intent", "predicted vertical intent"],
+        "Reason": "reason for this prediction",
+        "Bounding_box": [x1, y1, x2, y2]
+        },
+        "car": {
+        "Intent": ["predicted lateral intent", "predicted vertical intent"],
+        "Reason": "reason for this prediction",
+        "Bounding_box": [x1, y1, x2, y2]
+        }
+        ... (for all objects and NOT a list)
+        }
+        The Intent field list should ALWAYS have two values: one for lateral and one for vertical. Strictly
+        output in valid JSON format.
+        """
     )
 
     print(f"Starting dataset preparation for {len(df)} rows...")
@@ -279,7 +300,7 @@ print(f"Dataset ready. Columns: {train_dataset.column_names}")
 best_lr = 1e-5
 lowest_lr_loss = float('inf')
 
-for lr in [1e-5, 2e-5, 5e-5]: # 
+for lr in [1e-5, 2e-5, 5e-5]: 
     print(f"\n Starting Phase 2.1 | Testing LR: {lr}, Rank: 8")
     try:
         # run_experiment handles the VRAM reset, BF16 config, and training
