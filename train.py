@@ -11,7 +11,6 @@ from transformers import (
     BitsAndBytesConfig, 
     Qwen2_5_VLForConditionalGeneration
 )
-import parameter_search
 from parameter_search import (
     prepare_drama_x_dataset, 
     flat_drama_collator
@@ -56,7 +55,6 @@ lora_config = LoraConfig(
 )
 model = get_peft_model(model, lora_config)
 processor = AutoProcessor.from_pretrained("Qwen/Qwen2.5-VL-3B-Instruct")
-parameter_search.processor = processor
 
 # Training Arguments
 # Added checkpointing to save progress in case of system suspend
