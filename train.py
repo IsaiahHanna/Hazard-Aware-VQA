@@ -91,7 +91,6 @@ if os.path.exists(OUTPUT_DIR):
 
 # If checkpoint exists, resume from checkpoint
 trainer.train(resume_from_checkpoint=last_checkpoint)
-trainer.train()
 
 # Save Final Adapters
 trainer.save_model(OUTPUT_DIR)
