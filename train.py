@@ -1,6 +1,5 @@
 import os
 import torch
-import json
 
 from datasets import Dataset
 import pandas as pd
@@ -85,6 +84,15 @@ trainer = SFTTrainer(
 )
 
 print(f"Starting Final Training: LR={BEST_LR}, Rank={BEST_RANK}")
+last_checkpoint = None
+
+if os.path.exists(OUTPUT_DIR):
+    checkpoints = [os.path.join(OUTPUT_DIR, d) for d in os.listdir(OUTPUT_DIR) if "checkpoint-" in d]
+    if checkpoints:
+        last_checkpoint = max(checkpoints, key=os.path.getmtime)
+
+# If checkpoint exists, resume from checkpoint
+trainer.train(resume_from_checkpoint=last_checkpoint)
 trainer.train()
 
 # Save Final Adapters
