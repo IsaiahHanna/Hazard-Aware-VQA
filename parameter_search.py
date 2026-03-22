@@ -21,8 +21,8 @@ from transformers import (
 if os.getcwd() != '420 Project/Hazard-Aware-VQA':
     if os.path.exists("420 Project/Hazard-Aware-VQA"):
         os.chdir("420 Project/Hazard-Aware-VQA")
-csv = pd.read_csv("./../drama_subset_5/drama_subset_5/subset_annotations.csv")
-data_path = "./../drama_subset_5/drama_subset_5"
+csv = pd.read_csv("../drama_subset_8/train/annotations.csv")
+data_path = "../drama_subset_8/train"
 work_dir = "./temp_frames" 
 os.makedirs(work_dir, exist_ok=True)
 

@@ -18,8 +18,8 @@ from parameter_search import (
 
 MODEL_ID = "Qwen/Qwen2.5-VL-3B-Instruct"
 OUTPUT_DIR = "./hazard_vqa_final_model"
-DATA_PATH = "./../drama_subset_5/drama_subset_5"
-CSV_PATH = "./../drama_subset_5/drama_subset_5/subset_annotations.csv"
+DATA_PATH = "../drama_subset_8/train"
+CSV_PATH = "../drama_subset_8/train/annotations.csv"
 
 # Optimized Hyperparameters (From Phase 2 Results)
 BEST_LR = 5e-5
