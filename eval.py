@@ -193,8 +193,6 @@ def evaluate():
         metrics["gt"]["actions"].append(gt_json.get("Suggested_action", ""))
 
         for mode, model in [("base", base_model), ("ft", ft_model)]:
-            if mode == "base": model.disable_adapters()
-            else: model.enable_adapters()
             
             pred = get_model_prediction(model, processor, item['frames'], item['instruction'])
             
