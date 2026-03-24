@@ -4,6 +4,7 @@ import json
 import torch
 import pandas as pd
 from PIL import Image
+from PIL import Image
 from bert_score import score
 from sklearn.metrics import f1_score
 from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
@@ -148,6 +149,7 @@ def get_model_prediction(model, processor, frames, instruction):
         all_intents = extract_intent(response)
         
     if not all_intents: all_intents = ["stationary"]
+    if not all_intents: all_intents = ["stationary"]
     return {"intents": sorted(list(set(all_intents))), "action": action, "risk": risk}
 
 def evaluate():
@@ -159,6 +161,10 @@ def evaluate():
     ft_model = PeftModel.from_pretrained(base_model, ADAPTER_PATH)
     
     df = pd.read_csv(CSV_PATH) 
+    test_data = prepare_eval_dataset(df,DATA_PATH)
+    if not test_data:
+        print("Fatal: No test data loaded. Check sibling directory paths.")
+        return
     test_data = prepare_eval_dataset(df,DATA_PATH)
     if not test_data:
         print("Fatal: No test data loaded. Check sibling directory paths.")
