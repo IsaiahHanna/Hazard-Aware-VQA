@@ -165,10 +165,6 @@ def evaluate():
     if not test_data:
         print("Fatal: No test data loaded. Check sibling directory paths.")
         return
-    test_data = prepare_eval_dataset(df,DATA_PATH)
-    if not test_data:
-        print("Fatal: No test data loaded. Check sibling directory paths.")
-        return
     
     metrics = {
         "base": {"intents": [], "actions": [], "consistency": []},
