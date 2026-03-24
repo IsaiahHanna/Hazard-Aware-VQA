@@ -122,7 +122,17 @@ output in valid JSON format.
 
 def get_model_prediction(model, processor, frames, instruction):
     """Extracts risk, action, and aggregated intents for up to 5 VRUs"""
-    inputs = processor(text=[instruction], videos=[frames], return_tensors="pt").to("cuda")
+    full_prompt = f"<|im_start|>user\n<|vision_start|><|video_pad|><|vision_end|>{instruction}<|im_end|>\n<|im_start|>assistant\n"
+    
+    # 2. Process with the new prompt
+    inputs = processor(
+        text=[full_prompt], 
+        videos=[frames], 
+        padding=True, 
+        return_tensors="pt"
+    ).to("cuda")
+    
+    # 3. Generate
     output_ids = model.generate(**inputs, max_new_tokens=512)
     response = processor.batch_decode(output_ids, skip_special_tokens=True)[0]
     
