@@ -237,8 +237,11 @@ def evaluate():
         y_true = metrics["gt"]["intents"]
         y_pred = metrics[mode]["intents"]
         f1 = f1_score(y_true, y_pred, average='weighted') 
+
+        clean_preds = [str(a) for a in metrics[mode]["actions"]]
+        clean_gts = [str(a) for a in metrics["gt"]["actions"]]
         
-        _, _, f1_bert = score(metrics[mode]["actions"], metrics["gt"]["actions"], lang="en", verbose=False)
+        _, _, f1_bert = score(clean_preds, clean_gts, lang="en", verbose=False)
         
         consistency = sum(metrics[mode]["consistency"]) / len(metrics[mode]["consistency"]) if metrics[mode]["consistency"] else 0
         
