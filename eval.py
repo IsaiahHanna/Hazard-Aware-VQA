@@ -143,7 +143,7 @@ def get_model_prediction(model, processor, frames, instruction):
     response = processor.batch_decode(output_ids[:, input_len:], skip_special_tokens=True)[0]
     
     # Now 'response' should start with the JSON, not "user..."
-    print(f"DEBUG RESPONSE: {response}")
+    #print(f"DEBUG RESPONSE: {response}")
     
     risk = "yes" if "risk\": \"yes" in response.lower() else "no"
     action = response
