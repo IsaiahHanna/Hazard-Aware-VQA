@@ -142,20 +142,25 @@ def get_model_prediction(model, processor, frames, instruction):
     
     try:
         clean_json = response.split("assistant\n")[-1].strip()
+        clean_json = clean_json.replace("```json", "").replace("```", "").strip()
+        
         res_json = json.loads(clean_json)
         action = res_json.get("Suggested_action", response)
         
-        vru_keywords = ["pedestrian", "cyclist", "motorcyclist"]
+        vru_keywords = ["pedestrian", "cyclist", "cylist", "motorcyclist", "car"]
+        
         for key, value in res_json.items():
             if any(vru in key.lower() for vru in vru_keywords) and isinstance(value, dict):
                 raw_intent = value.get("Intent", "")
-                # Handle both string and list outputs from model
+                
+                # Standardize intent extraction
                 if isinstance(raw_intent, list):
                     for sub_intent in raw_intent:
                         all_intents.extend(extract_intent(sub_intent))
                 else:
                     all_intents.extend(extract_intent(raw_intent))
-    except:
+    except Exception as e:
+        # Fallback to regex-style extraction from the raw text if JSON is broken
         all_intents = extract_intent(response)
         
     if not all_intents: all_intents = ["stationary"]
