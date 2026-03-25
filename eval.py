@@ -9,6 +9,7 @@ from bert_score import score
 from sklearn.metrics import f1_score
 from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
 from peft import PeftModel
+from sklearn.preprocessing import MultiLabelBinarizer
 from parameter_search import get_clipped_gif_frames
 
 # 1. Configuration
@@ -16,6 +17,14 @@ MODEL_ID = "Qwen/Qwen2.5-VL-3B-Instruct"
 ADAPTER_PATH = "./hazard_vqa_final_model"
 CSV_PATH = "../drama_subset_8/test/annotations.csv"
 DATA_PATH = "../drama_subset_8/test"
+
+CLASSES = [
+    "moves towards ego vehicle", 
+    "moves away from ego vehicle", 
+    "goes to the left", 
+    "goes to the right", 
+    "stationary"
+]
 
 def extract_intent(text):
     """Maps raw text to the 5-Class Intent Taxonomy (Towards, Away, Left, Right, Stationary)"""
@@ -203,8 +212,7 @@ def evaluate():
                     gt_intents_list.extend(extract_intent(intent_val))
         
         # Intent for F1-score
-        metrics["gt"]["intents"].append(", ".join(sorted(list(set(gt_intents_list)))))
-        # Action for BERT-Score
+        metrics["gt"]["intents"].append(sorted(list(set(gt_intents_list))))
         metrics["gt"]["actions"].append(gt_json.get("Suggested_action", ""))
 
         for mode, model in [("base", base_model), ("ft", ft_model)]:
@@ -212,7 +220,7 @@ def evaluate():
             pred = get_model_prediction(model, processor, item['frames'], item['instruction'])
             
             # Aggregate all detected VRU intents into one string for F1
-            metrics[mode]["intents"].append(", ".join(pred["intents"]))
+            metrics[mode]["intents"].append(pred["intents"])
             metrics[mode]["actions"].append(pred["action"])
 
             # Temporal Consistency 
@@ -237,15 +245,15 @@ def evaluate():
         
         torch.cuda.empty_cache()
 
-    # Calculate Metrics
-    for mode in ["base", "ft"]:
-        y_true = metrics["gt"]["intents"]
-        y_pred = metrics[mode]["intents"]
-        f1 = f1_score(y_true, y_pred, average='weighted') 
+    mlb = MultiLabelBinarizer(classes=CLASSES)
+    y_true = mlb.fit_transform(metrics["gt"]["intents"])
 
+    for mode in ["base", "ft"]:
+        y_pred = mlb.fit_transform(metrics[mode]["intents"])
+        f1 = f1_score(y_true, y_pred, average='weighted', zero_division=0)
+        
         clean_preds = [str(a) for a in metrics[mode]["actions"]]
         clean_gts = [str(a) for a in metrics["gt"]["actions"]]
-        
         _, _, f1_bert = score(clean_preds, clean_gts, lang="en", verbose=False)
         
         consistency = sum(metrics[mode]["consistency"]) / len(metrics[mode]["consistency"]) if metrics[mode]["consistency"] else 0
