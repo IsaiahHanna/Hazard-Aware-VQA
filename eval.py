@@ -141,8 +141,8 @@ def get_model_prediction(model, processor, frames, instruction):
     all_intents = []
     
     try:
-        clean_json = response.split("assistant\n")[-1].strip()
-        clean_json = clean_json.replace("```json", "").replace("```", "").strip()
+        raw_output = response.split("assistant\n")[-1].strip()
+        clean_json = raw_output.replace("```json", "").replace("```", "").strip()
         
         res_json = json.loads(clean_json)
         action = res_json.get("Suggested_action", response)
@@ -160,7 +160,7 @@ def get_model_prediction(model, processor, frames, instruction):
                 else:
                     all_intents.extend(extract_intent(raw_intent))
     except Exception as e:
-        # Fallback to regex-style extraction from the raw text if JSON is broken
+        print(f"JSON Parsing failed: {e}. Falling back to text search.")
         all_intents = extract_intent(response)
         
     if not all_intents: all_intents = ["stationary"]
