@@ -124,17 +124,17 @@ def get_model_prediction(model, processor, frames, instruction):
     """Extracts risk, action, and aggregated intents for up to 5 VRUs"""
     full_prompt = f"<|im_start|>user\n<|vision_start|><|video_pad|><|vision_end|>{instruction}<|im_end|>\n<|im_start|>assistant\n"
     
-    # 2. Process with the new prompt
-    inputs = processor(
-        text=[full_prompt], 
-        videos=[frames], 
-        padding=True, 
-        return_tensors="pt"
-    ).to("cuda")
+    inputs = processor(text=[full_prompt], videos=[frames], return_tensors="pt").to("cuda")
     
-    # 3. Generate
+    # generate output
     output_ids = model.generate(**inputs, max_new_tokens=512)
-    response = processor.batch_decode(output_ids, skip_special_tokens=True)[0]
+    
+    # Only decode new tokens
+    input_len = inputs.input_ids.shape[1]
+    response = processor.batch_decode(output_ids[:, input_len:], skip_special_tokens=True)[0]
+    
+    # Now 'response' should start with the JSON, not "user..."
+    print(f"DEBUG RESPONSE: {response[:100]}")
     
     risk = "yes" if "risk\": \"yes" in response.lower() else "no"
     action = response
