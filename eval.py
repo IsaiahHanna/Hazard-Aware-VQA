@@ -174,7 +174,7 @@ def get_model_prediction(model, processor, frames, instruction):
         
     if not all_intents: all_intents = ["stationary"]
     if not all_intents: all_intents = ["stationary"]
-    return {"intents": sorted(list(set(all_intents))), "action": action, "risk": risk}
+    return {"intents": sorted(list(set(all_intents))), "action": str(action), "risk": risk}
 
 def evaluate():
     print("Initializing Phase 3 Evaluation on 91 Unseen Samples...")
@@ -182,7 +182,8 @@ def evaluate():
     base_model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
         MODEL_ID, torch_dtype=torch.bfloat16, device_map="auto"
     )
-    ft_model = PeftModel.from_pretrained(base_model, ADAPTER_PATH)
+    model = PeftModel.from_pretrained(base_model, ADAPTER_PATH, adapter_name="hazard_vqa")
+    model.set_adapter("hazard_vqa")
     
     df = pd.read_csv(CSV_PATH) 
     test_data = prepare_eval_dataset(df,DATA_PATH)
@@ -215,7 +216,12 @@ def evaluate():
         metrics["gt"]["intents"].append(sorted(list(set(gt_intents_list))))
         metrics["gt"]["actions"].append(gt_json.get("Suggested_action", ""))
 
-        for mode, model in [("base", base_model), ("ft", ft_model)]:
+        for mode in ["base","ft"]:
+            if mode == "base":
+                model.base_model.disable_adapter_layers()
+            else:
+                model.base_model.enable_adapter_layers()
+                model.set_adapter("hazard_vqa")
             
             pred = get_model_prediction(model, processor, item['frames'], item['instruction'])
             
