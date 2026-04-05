@@ -9,7 +9,7 @@ from sklearn.preprocessing import MultiLabelBinarizer
 
 # Config
 MODEL_ID = "Qwen/Qwen2.5-VL-3B-Instruct"
-ADAPTER_PATH = "./hazard_vqa_final_model2/checkpoint-150"
+ADAPTER_PATH = "./hazard_vqa_final_model/checkpoint-150"
 CSV_PATH = "../drama_subset_8/test/annotations.csv"
 DATA_PATH = "../drama_subset_8/test"
 
