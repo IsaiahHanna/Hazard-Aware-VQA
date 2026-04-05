@@ -6,6 +6,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
 from peft import PeftModel
 from sklearn.preprocessing import MultiLabelBinarizer
+from eval import prepare_eval_dataset
 
 # Config
 MODEL_ID = "Qwen/Qwen2.5-VL-3B-Instruct"
@@ -68,13 +69,101 @@ def get_model_prediction(model, processor, frames, instruction):
     if not paired_labels: paired_labels.add("vru_stationary")
     return {"paired_labels": list(paired_labels), "action": str(action), "risk": risk}
 
+def prepare_eval_dataset(df, path):
+    """Handles Pathing and Multi-VRU JSON strings"""
+    flat_data = []
+    TARGET_SIZE = (640, 480)
+    PROMPT_TEXT = (
+        """
+For the provided image and question, generate a object-intent JSON which includes the following: 
+1. AT MOST 5 objects from the scene including Pedestrians and Cylists.
+2. Predicted intent for every object. Intent should be one of these values:
+2.1 Lateral (Sideways) Intent Options (has to be from these two options): - “goes to the left” - “goes
+to the right”
+2.2 Vertical Intent Options: -“moves away from ego vehicle” - “moves towards ego vehicle” -
+“stationary”
+3. Risk score for this prediction (Yes or No). Risk is defined as a hazardous scenario that poses
+danger to the ego vehicle.
+4. Bounding box of each object. these should be with respect to orginal image dimensions.
+5. Suggested action given the scene and risk score.
+An example structure would look like this:
+{
+"Risk": "Yes/No",
+"Suggested_action": "suggested action for ego vehicle",
+"pedestrian": {
+"Intent": ["predicted lateral intent", "predicted vertical intent"],
+"Reason": "reason for this prediction",
+"Bounding_box": [x1, y1, x2, y2]
+},
+"car": {
+"Intent": ["predicted lateral intent", "predicted vertical intent"],
+"Reason": "reason for this prediction",
+"Bounding_box": [x1, y1, x2, y2]
+}
+... (for all objects and NOT a list)
+}
+The Intent field list should ALWAYS have two values: one for lateral and one for vertical. Strictly
+output in valid JSON format.
+        """
+    )
+
+    print(f"Starting Phase 3 dataset preparation for {len(df)} rows...")
+
+    for i, row in df.iterrows():
+        # Fix paths using the DATA_PATH prefix
+        vid_path = os.path.join(path, row['video_path'])
+        img_path = os.path.join(path, row['image_path'])
+        
+        raw_paths = get_clipped_gif_frames(vid_path, img_path, radius=2)
+        if not raw_paths: continue
+
+        processed_pil_images = []
+        for f_path in raw_paths:
+            clean_path = f_path.replace("file://", "")
+            try:
+                img = Image.open(clean_path).convert("RGB").resize(TARGET_SIZE)
+                processed_pil_images.append(img)
+            except: continue
+
+        if not processed_pil_images: continue
+
+        try:
+            peds = ast.literal_eval(row['Pedestrians']) if pd.notna(row['Pedestrians']) else {}
+            cycs = ast.literal_eval(row['Cyclists']) if pd.notna(row['Cyclists']) else {}
+        except:
+            peds, cycs = {}, {}
+
+        # Build Ground Truth labels
+        target_dict = {
+            "Risk": row.get('Risk', 'No'),
+            "Suggested_action": row.get('suggested_action', 'continue')
+        }
+
+        vru_count = 0
+        for cat_name, cat_data in [("pedestrian", peds), ("cyclist", cycs)]:
+            for _, obj_data in cat_data.items():
+                if obj_data and vru_count < 5:
+                    target_dict[f"{cat_name}_{vru_count}"] = {
+                        "Intent": obj_data.get('Intent', ["stationary"]),
+                        "Reason": obj_data.get('Description', "Hazard detected"),
+                        "Bounding_box": obj_data.get('Box', [0, 0, 0, 0])
+                    }
+                    vru_count += 1
+
+        flat_data.append({
+            "frames": processed_pil_images,
+            "instruction": PROMPT_TEXT,
+            "target": json.dumps(target_dict)
+        })
+    return flat_data
+
 def evaluate():
     print("Initializing Strict Object-Aware Evaluation...")
     processor = AutoProcessor.from_pretrained(MODEL_ID)
     base_model = Qwen2_5_VLForConditionalGeneration.from_pretrained(MODEL_ID, torch_dtype=torch.bfloat16, device_map="auto")
     model = PeftModel.from_pretrained(base_model, ADAPTER_PATH, adapter_name="hazard_vqa")
     
-    from eval import prepare_eval_dataset
+    
     df = pd.read_csv(CSV_PATH) 
     test_data = prepare_eval_dataset(df, DATA_PATH)
     
