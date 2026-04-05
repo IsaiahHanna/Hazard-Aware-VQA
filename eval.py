@@ -6,7 +6,6 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
 from peft import PeftModel
 from sklearn.preprocessing import MultiLabelBinarizer
-from eval import prepare_eval_dataset
 
 # Config
 MODEL_ID = "Qwen/Qwen2.5-VL-3B-Instruct"
