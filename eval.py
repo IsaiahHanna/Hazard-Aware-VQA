@@ -1,3 +1,4 @@
+import os
 import json
 import torch
 import pandas as pd
@@ -6,6 +7,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
 from peft import PeftModel
 from sklearn.preprocessing import MultiLabelBinarizer
+from parameter_search import get_clipped_gif_frames
 
 # Config
 MODEL_ID = "Qwen/Qwen2.5-VL-3B-Instruct"
