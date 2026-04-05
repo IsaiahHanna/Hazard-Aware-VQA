@@ -3,6 +3,7 @@ import os
 import json
 import torch
 import pandas as pd
+from PIL import Image
 from bert_score import score
 from sklearn.metrics import f1_score, precision_score, recall_score
 from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
